@@ -1,0 +1,654 @@
+<!doctype html>
+<html
+  lang="es"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mi Catálogo - Personal Movie Catalog</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --letterboxd-green: #00e054;
+        --letterboxd-orange: #ff8000;
+        --letterboxd-blue: #40bcf4;
+        --letterboxd-dark: #14181c;
+        --letterboxd-darker: #0d1114;
+        --letterboxd-gray: #2c3440;
+        --letterboxd-light-gray: #89a;
+      }
+      body {
+        background-color: var(--letterboxd-dark);
+        color: #fff;
+        min-height: 100vh;
+      }
+      .navbar {
+        background-color: var(--letterboxd-darker) !important;
+        border-bottom: 1px solid var(--letterboxd-gray);
+      }
+      .navbar-brand {
+        color: var(--letterboxd-green) !important;
+        font-weight: bold;
+      }
+      .btn-primary {
+        background-color: var(--letterboxd-green);
+        border-color: var(--letterboxd-green);
+        color: #000;
+      }
+      .btn-primary:hover {
+        background-color: #00c04a;
+        border-color: #00c04a;
+        color: #000;
+      }
+      .btn-outline-primary {
+        border-color: var(--letterboxd-green);
+        color: var(--letterboxd-green);
+      }
+      .btn-outline-primary:hover {
+        background-color: var(--letterboxd-green);
+        color: #000;
+      }
+      .card {
+        background-color: var(--letterboxd-gray);
+        border: none;
+      }
+      .form-control,
+      .form-select {
+        background-color: var(--letterboxd-darker);
+        border-color: var(--letterboxd-gray);
+        color: #fff;
+      }
+      .form-control:focus,
+      .form-select:focus {
+        background-color: var(--letterboxd-darker);
+        border-color: var(--letterboxd-green);
+        color: #fff;
+        box-shadow: 0 0 0 0.25rem rgba(0, 224, 84, 0.25);
+      }
+      .movie-card {
+        transition: transform 0.2s ease;
+        cursor: pointer;
+      }
+      .movie-card:hover {
+        transform: scale(1.03);
+      }
+      .movie-poster {
+        aspect-ratio: 2/3;
+        object-fit: cover;
+        border-radius: 4px;
+        width: 100%;
+      }
+      .movie-poster-placeholder {
+        aspect-ratio: 2/3;
+        background-color: var(--letterboxd-darker);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+      }
+      .star-rating .bi-star-fill {
+        color: var(--letterboxd-orange);
+      }
+      .star-rating .bi-star {
+        color: var(--letterboxd-light-gray);
+      }
+      .star-rating-input {
+        cursor: pointer;
+      }
+      .star-rating-input:hover .bi-star {
+        color: var(--letterboxd-orange);
+      }
+      .badge-pending {
+        background-color: var(--letterboxd-blue) !important;
+      }
+      .badge-watched {
+        background-color: var(--letterboxd-green) !important;
+        color: #000 !important;
+      }
+      a {
+        color: var(--letterboxd-blue);
+      }
+      a:hover {
+        color: var(--letterboxd-green);
+      }
+      .text-muted {
+        color: var(--letterboxd-light-gray) !important;
+      }
+      .nav-pills .nav-link {
+        color: var(--letterboxd-light-gray);
+      }
+      .nav-pills .nav-link.active {
+        background-color: var(--letterboxd-green);
+        color: #000;
+      }
+      .nav-pills .nav-link:hover:not(.active) {
+        color: #fff;
+      }
+      .search-section {
+        background-color: var(--letterboxd-darker);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .movie-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+        padding: 1rem 0.5rem 0.5rem;
+        border-radius: 0 0 4px 4px;
+      }
+      .movie-actions {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .movie-card:hover .movie-actions {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/dashboard">
+          <i class="bi bi-film me-2"></i>Personal Movie Catalog
+        </a>
+        <div class="d-flex align-items-center">
+          <span class="text-muted me-3">
+            <i class="bi bi-person-circle me-1"></i>
+            <span th:text="${userName}">Usuario</span>
+          </span>
+          <form th:action="@{/logout}" method="post" class="d-inline">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-box-arrow-right me-1"></i>Salir
+            </button>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-fluid py-4">
+      <!-- Alerts -->
+      <div
+        th:if="${success}"
+        class="alert alert-success alert-dismissible fade show"
+        role="alert"
+      >
+        <i class="bi bi-check-circle me-2"></i
+        ><span th:text="${success}">Éxito</span>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+      <div
+        th:if="${error}"
+        class="alert alert-danger alert-dismissible fade show"
+        role="alert"
+      >
+        <i class="bi bi-exclamation-triangle me-2"></i
+        ><span th:text="${error}">Error</span>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+
+      <!-- Search Section -->
+      <div class="search-section">
+        <h5 class="mb-3"><i class="bi bi-search me-2"></i>Buscar Películas</h5>
+        <form th:action="@{/dashboard}" method="get" class="row g-3">
+          <div class="col-md-10">
+            <input
+              type="text"
+              class="form-control form-control-lg"
+              name="search"
+              th:value="${searchQuery}"
+              placeholder="Busca una película en TMDB..."
+            />
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+              <i class="bi bi-search me-1"></i>Buscar
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Popular Movies (shown when not searching) -->
+      <div
+        th:if="${popularMovies != null and !popularMovies.isEmpty()}"
+        class="mb-5"
+      >
+        <h4 class="mb-3">
+          <i class="bi bi-fire me-2" style="color: var(--letterboxd-orange)"></i
+          >Películas Populares
+        </h4>
+        <div
+          class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3"
+        >
+          <div th:each="movie : ${popularMovies}" class="col">
+            <div class="card movie-card h-100 position-relative">
+              <img
+                th:if="${movie.fullPosterUrl != null}"
+                th:src="${movie.fullPosterUrl}"
+                th:alt="${movie.title}"
+                class="movie-poster"
+              />
+              <div
+                th:if="${movie.fullPosterUrl == null}"
+                class="movie-poster-placeholder"
+              >
+                <i
+                  class="bi bi-film"
+                  style="font-size: 2rem; color: var(--letterboxd-gray)"
+                ></i>
+              </div>
+              <div class="card-body p-2">
+                <h6
+                  class="card-title mb-1 text-truncate"
+                  th:text="${movie.title}"
+                >
+                  Título
+                </h6>
+                <small class="text-muted" th:text="${movie.year}">Año</small>
+              </div>
+              <div
+                class="card-footer p-2 border-0"
+                style="background: transparent"
+              >
+                <form
+                  th:action="@{/dashboard/add}"
+                  method="post"
+                  class="d-flex gap-1"
+                >
+                  <input
+                    type="hidden"
+                    name="tmdbId"
+                    th:value="${movie.tmdbId}"
+                  />
+                  <input type="hidden" name="title" th:value="${movie.title}" />
+                  <input type="hidden" name="year" th:value="${movie.year}" />
+                  <input
+                    type="hidden"
+                    name="posterPath"
+                    th:value="${movie.posterPath}"
+                  />
+                  <button
+                    type="submit"
+                    name="status"
+                    value="PENDING"
+                    class="btn btn-sm btn-outline-info flex-grow-1"
+                    title="Agregar a Pendientes"
+                  >
+                    <i class="bi bi-clock"></i>
+                  </button>
+                  <button
+                    type="submit"
+                    name="status"
+                    value="WATCHED"
+                    class="btn btn-sm btn-outline-success flex-grow-1"
+                    title="Marcar como Vista"
+                  >
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Results -->
+      <div
+        th:if="${searchResults != null and !searchResults.isEmpty()}"
+        class="mb-5"
+      >
+        <h4 class="mb-3">
+          <i class="bi bi-collection-play me-2"></i>Resultados para "<span
+            th:text="${searchQuery}"
+            >búsqueda</span
+          >"
+        </h4>
+        <div
+          class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3"
+        >
+          <div th:each="movie : ${searchResults}" class="col">
+            <div class="card movie-card h-100 position-relative">
+              <img
+                th:if="${movie.fullPosterUrl != null}"
+                th:src="${movie.fullPosterUrl}"
+                th:alt="${movie.title}"
+                class="movie-poster"
+              />
+              <div
+                th:if="${movie.fullPosterUrl == null}"
+                class="movie-poster-placeholder"
+              >
+                <i
+                  class="bi bi-film"
+                  style="font-size: 2rem; color: var(--letterboxd-gray)"
+                ></i>
+              </div>
+              <div class="card-body p-2">
+                <h6
+                  class="card-title mb-1 text-truncate"
+                  th:text="${movie.title}"
+                >
+                  Título
+                </h6>
+                <small class="text-muted" th:text="${movie.year}">Año</small>
+              </div>
+              <div
+                class="card-footer p-2 border-0"
+                style="background: transparent"
+              >
+                <form
+                  th:action="@{/dashboard/add}"
+                  method="post"
+                  class="d-flex gap-1"
+                >
+                  <input
+                    type="hidden"
+                    name="tmdbId"
+                    th:value="${movie.tmdbId}"
+                  />
+                  <input type="hidden" name="title" th:value="${movie.title}" />
+                  <input type="hidden" name="year" th:value="${movie.year}" />
+                  <input
+                    type="hidden"
+                    name="posterPath"
+                    th:value="${movie.posterPath}"
+                  />
+                  <button
+                    type="submit"
+                    name="status"
+                    value="PENDING"
+                    class="btn btn-sm btn-outline-info flex-grow-1"
+                    title="Agregar a Pendientes"
+                  >
+                    <i class="bi bi-clock"></i>
+                  </button>
+                  <button
+                    type="submit"
+                    name="status"
+                    value="WATCHED"
+                    class="btn btn-sm btn-outline-success flex-grow-1"
+                    title="Marcar como Vista"
+                  >
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        th:if="${searchResults != null and searchResults.isEmpty()}"
+        class="alert alert-info"
+      >
+        <i class="bi bi-info-circle me-2"></i>No se encontraron resultados para
+        tu búsqueda.
+      </div>
+
+      <hr class="my-4" style="border-color: var(--letterboxd-gray)" />
+
+      <!-- My Movies Section -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0"><i class="bi bi-bookmarks me-2"></i>Mi Catálogo</h4>
+        <ul class="nav nav-pills">
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              th:classappend="${currentFilter == null} ? 'active' : ''"
+              th:href="@{/dashboard}"
+              >Todas</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              th:classappend="${currentFilter == 'pending'} ? 'active' : ''"
+              th:href="@{/dashboard(filter='pending')}"
+              >Pendientes</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              th:classappend="${currentFilter == 'watched'} ? 'active' : ''"
+              th:href="@{/dashboard(filter='watched')}"
+              >Vistas</a
+            >
+          </li>
+        </ul>
+      </div>
+
+      <div th:if="${movies.isEmpty()}" class="text-center py-5 text-muted">
+        <i class="bi bi-film" style="font-size: 4rem"></i>
+        <p class="mt-3">
+          No tienes películas guardadas aún.<br />¡Busca una y agrégala!
+        </p>
+      </div>
+
+      <div
+        th:if="${!movies.isEmpty()}"
+        class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3"
+      >
+        <div th:each="movie : ${movies}" class="col">
+          <div
+            class="card movie-card h-100 position-relative"
+            data-bs-toggle="modal"
+            th:data-bs-target="'#movieModal' + ${movie.id}"
+          >
+            <!-- Delete Button -->
+            <div class="movie-actions">
+              <form
+                th:action="@{/dashboard/delete/{id}(id=${movie.id})}"
+                method="post"
+                onclick="event.stopPropagation()"
+              >
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-danger"
+                  title="Eliminar"
+                  onclick="return confirm('¿Eliminar esta película?');"
+                >
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+
+            <!-- Poster -->
+            <img
+              th:if="${movie.fullPosterUrl != null}"
+              th:src="${movie.fullPosterUrl}"
+              th:alt="${movie.title}"
+              class="movie-poster"
+            />
+            <div
+              th:if="${movie.fullPosterUrl == null}"
+              class="movie-poster-placeholder"
+            >
+              <i
+                class="bi bi-film"
+                style="font-size: 2rem; color: var(--letterboxd-gray)"
+              ></i>
+            </div>
+
+            <!-- Info Overlay -->
+            <div class="movie-overlay">
+              <span
+                th:if="${movie.status.name() == 'PENDING'}"
+                class="badge badge-pending mb-1"
+                >Pendiente</span
+              >
+              <span
+                th:if="${movie.status.name() == 'WATCHED'}"
+                class="badge badge-watched mb-1"
+                >Vista</span
+              >
+              <h6
+                class="card-title mb-0 text-truncate"
+                th:text="${movie.title}"
+              >
+                Título
+              </h6>
+              <div th:if="${movie.rating != null}" class="star-rating">
+                <span th:each="i : ${#numbers.sequence(1, 5)}">
+                  <i
+                    th:class="${i <= movie.rating} ? 'bi bi-star-fill' : 'bi bi-star'"
+                  ></i>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Movie Modal -->
+          <div
+            class="modal fade"
+            th:id="'movieModal' + ${movie.id}"
+            tabindex="-1"
+            onclick="event.stopPropagation()"
+          >
+            <div class="modal-dialog modal-dialog-centered">
+              <div
+                class="modal-content"
+                style="background-color: var(--letterboxd-gray)"
+              >
+                <div class="modal-header border-0">
+                  <h5 class="modal-title" th:text="${movie.title}">Título</h5>
+                  <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal"
+                  ></button>
+                </div>
+                <div class="modal-body">
+                  <div class="row">
+                    <div class="col-4">
+                      <img
+                        th:if="${movie.fullPosterUrl != null}"
+                        th:src="${movie.fullPosterUrl}"
+                        th:alt="${movie.title}"
+                        class="img-fluid rounded"
+                      />
+                    </div>
+                    <div class="col-8">
+                      <p class="text-muted mb-2">
+                        <i class="bi bi-calendar me-1"></i
+                        ><span th:text="${movie.year}">Año</span>
+                      </p>
+                      <span
+                        th:if="${movie.status.name() == 'PENDING'}"
+                        class="badge badge-pending"
+                        >Pendiente</span
+                      >
+                      <span
+                        th:if="${movie.status.name() == 'WATCHED'}"
+                        class="badge badge-watched"
+                        >Vista</span
+                      >
+
+                      <form
+                        th:action="@{/dashboard/update/{id}(id=${movie.id})}"
+                        method="post"
+                        class="mt-3"
+                      >
+                        <!-- Rating -->
+                        <div class="mb-3">
+                          <label class="form-label">Calificación</label>
+                          <select name="rating" class="form-select">
+                            <option value="">Sin calificar</option>
+                            <option
+                              th:each="i : ${#numbers.sequence(1, 5)}"
+                              th:value="${i}"
+                              th:text="${i} + ' ★'"
+                              th:selected="${movie.rating == i}"
+                            >
+                              1 ★
+                            </option>
+                          </select>
+                        </div>
+                        <!-- Review -->
+                        <div class="mb-3">
+                          <label class="form-label">Reseña</label>
+                          <textarea
+                            name="review"
+                            class="form-control"
+                            rows="3"
+                            placeholder="Escribe tu opinión..."
+                            th:text="${movie.review}"
+                          ></textarea>
+                        </div>
+                        <!-- Status Toggle -->
+                        <div class="mb-3">
+                          <label class="form-label">Estado</label>
+                          <select name="status" class="form-select">
+                            <option
+                              value="PENDING"
+                              th:selected="${movie.status.name() == 'PENDING'}"
+                            >
+                              Pendiente
+                            </option>
+                            <option
+                              value="WATCHED"
+                              th:selected="${movie.status.name() == 'WATCHED'}"
+                            >
+                              Vista
+                            </option>
+                          </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                          <i class="bi bi-save me-1"></i>Guardar Cambios
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                  <!-- Existing Review Display -->
+                  <div
+                    th:if="${movie.review != null and !movie.review.isEmpty()}"
+                    class="mt-3 p-3 rounded"
+                    style="background-color: var(--letterboxd-darker)"
+                  >
+                    <h6><i class="bi bi-chat-quote me-1"></i>Mi Reseña:</h6>
+                    <p class="mb-0 text-muted" th:text="${movie.review}">
+                      Reseña
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="container-fluid py-4 text-center text-muted">
+      <small
+        >Personal Movie Catalog &copy; 2024 - Datos de
+        <a href="https://www.themoviedb.org/" target="_blank">TMDB</a></small
+      >
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
